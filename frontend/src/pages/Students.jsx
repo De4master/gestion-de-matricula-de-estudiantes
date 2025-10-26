@@ -1,139 +1,114 @@
-import { useState, useEffect } from "react";
-import Layout from "../components/Layout";
-import Card from "../components/Card";
-import { listStudents, createStudent } from "../api/students";
-import toast, { Toaster } from "react-hot-toast";
-import { UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { studentsList, studentsCreate, studentsDelete } from "../api";
+
+const empty = {
+  doc_id: "",
+  first_name: "",
+  last_name: "",
+  email: "",
+  birth_date: "",
+  address: "",
+  phone: "",
+  previous_school: ""
+};
 
 export default function Students() {
-  const [students, setStudents] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ first_name: "", last_name: "", email: "", date_of_birth: "" });
+  const [items, setItems] = useState([]);
+  const [form, setForm] = useState(empty);
+  const [loading, setLoading] = useState(false);
 
-  const fetchStudents = async () => {
-    const data = await listStudents();
-    setStudents(data);
-  };
+  const fetchAll = async () => setItems(await studentsList());
+  useEffect(() => { fetchAll(); }, []);
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  const handleSubmit = async (e) => {
+  const save = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      await createStudent(formData);
-      toast.success("Estudiante creado");
-      setFormData({ first_name: "", last_name: "", email: "", date_of_birth: "" });
-      setShowForm(false);
-      fetchStudents();
-    } catch (err) {
-      toast.error("Error al crear estudiante");
+      await studentsCreate(form);
+      setForm(empty);
+      fetchAll();
+    } catch (e) {
+      alert("Error al crear estudiante");
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const del = async (id) => {
+    if (!confirm("¿Eliminar estudiante?")) return;
+    await studentsDelete(id);
+    fetchAll();
+  };
+
   return (
-    <Layout>
-      <Toaster position="top-right" />
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold">Estudiantes</h1>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-lg transition"
-          >
-            <UserPlus size={18} /> Nuevo Estudiante
-          </button>
+    <>
+      <h1 style={{ marginTop: 0 }}>Estudiantes</h1>
+
+      <form className="card" onSubmit={save} style={{ display: "grid", gap: 12 }}>
+        <div className="grid-2">
+          <div>
+            <label>DNI / Partida</label>
+            <input className="input" value={form.doc_id} onChange={(e)=>setForm(s=>({...s, doc_id: e.target.value}))} required/>
+          </div>
+          <div>
+            <label>Correo</label>
+            <input className="input" value={form.email} onChange={(e)=>setForm(s=>({...s, email: e.target.value}))}/>
+          </div>
+          <div>
+            <label>Nombres</label>
+            <input className="input" value={form.first_name} onChange={(e)=>setForm(s=>({...s, first_name: e.target.value}))} required/>
+          </div>
+          <div>
+            <label>Apellidos</label>
+            <input className="input" value={form.last_name} onChange={(e)=>setForm(s=>({...s, last_name: e.target.value}))} required/>
+          </div>
+          <div>
+            <label>Fecha de nacimiento</label>
+            <input className="input" type="date" value={form.birth_date||""} onChange={(e)=>setForm(s=>({...s, birth_date: e.target.value}))}/>
+          </div>
+          <div>
+            <label>Teléfono</label>
+            <input className="input" value={form.phone} onChange={(e)=>setForm(s=>({...s, phone: e.target.value}))}/>
+          </div>
+          <div>
+            <label>Dirección</label>
+            <input className="input" value={form.address} onChange={(e)=>setForm(s=>({...s, address: e.target.value}))}/>
+          </div>
+          <div>
+            <label>Colegio anterior</label>
+            <input className="input" value={form.previous_school} onChange={(e)=>setForm(s=>({...s, previous_school: e.target.value}))}/>
+          </div>
         </div>
 
-        {showForm && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Crear Estudiante</h2>
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm mb-1">Nombre</label>
-                <input
-                  type="text"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Apellido</label>
-                <input
-                  type="text"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Fecha de Nacimiento</label>
-                <input
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
-                  required
-                />
-              </div>
-              <div className="col-span-2 flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-lg transition"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </Card>
-        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" disabled={loading}>{loading ? "Guardando..." : "Guardar"}</button>
+          <button type="button" className="btn secondary" onClick={()=>setForm(empty)}>Cancelar</button>
+        </div>
+      </form>
 
-        <Card className="p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-4">ID</th>
-                  <th className="text-left py-3 px-4">Nombre</th>
-                  <th className="text-left py-3 px-4">Email</th>
-                  <th className="text-left py-3 px-4">Fecha de Nacimiento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student.id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-3 px-4">{student.id}</td>
-                    <td className="py-3 px-4">{student.first_name} {student.last_name}</td>
-                    <td className="py-3 px-4">{student.email}</td>
-                    <td className="py-3 px-4">{student.date_of_birth}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      <div className="card" style={{ marginTop: 16 }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>ID</th><th>DNI</th><th>Nombres</th><th>Apellidos</th><th>Correo</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(s=>(
+              <tr key={s.id}>
+                <td>{s.id}</td>
+                <td>{s.doc_id}</td>
+                <td>{s.first_name}</td>
+                <td>{s.last_name}</td>
+                <td>{s.email || "-"}</td>
+                <td><button className="btn secondary" onClick={()=>del(s.id)}>Eliminar</button></td>
+              </tr>
+            ))}
+            {!items.length && <tr><td colSpan={6} style={{color:"#9ca3af"}}>Sin registros</td></tr>}
+          </tbody>
+        </table>
       </div>
-    </Layout>
+    </>
   );
 }
